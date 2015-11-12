@@ -288,8 +288,8 @@ static NSData *base64_decode(NSString *str){
 	const uint8_t *srcbuf = (const uint8_t *)[data bytes];
 	size_t srclen = (size_t)data.length;
 	
-	size_t block_size = SecKeyGetBlockSize(keyRef) * sizeof(uint8_t);
-	UInt8 *outbuf = malloc(block_size);
+	size_t block_size = SecKeyGetBlockSize(keyRef);
+	UInt8 *outbuf = malloc(block_size * sizeof(uint8_t));
 	size_t src_block_size = block_size;
 	
 	NSMutableData *ret = [[NSMutableData alloc] init];
@@ -303,7 +303,7 @@ static NSData *base64_decode(NSString *str){
 		size_t outlen = block_size;
 		OSStatus status = noErr;
 		status = SecKeyDecrypt(keyRef,
-							   kSecPaddingNone,
+							   kSecPaddingPKCS1,
 							   srcbuf + idx,
 							   data_len,
 							   outbuf,
@@ -314,21 +314,7 @@ static NSData *base64_decode(NSString *str){
 			ret = nil;
 			break;
 		}else{
-			//the actual decrypted data is in the middle, locate it!
-			int idxFirstZero = -1;
-			int idxNextZero = (int)outlen;
-			for ( int i = 0; i < outlen; i++ ) {
-				if ( outbuf[i] == 0 ) {
-					if ( idxFirstZero < 0 ) {
-						idxFirstZero = i;
-					} else {
-						idxNextZero = i;
-						break;
-					}
-				}
-			}
-			
-			[ret appendBytes:&outbuf[idxFirstZero+1] length:idxNextZero-idxFirstZero-1];
+			[ret appendBytes:outbuf length:outlen];
 		}
 	}
 	
